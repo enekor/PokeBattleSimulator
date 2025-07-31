@@ -6,101 +6,80 @@ public class Battle
     {
         ShowInfo(unit1, unit2);
 
-        List<int> damages = new List<int>();
         Console.ForegroundColor = ConsoleColor.Yellow;
         Console.WriteLine("Battle started!");
         Console.ResetColor();
         List<Unit> order = unit1.Speed >= unit2.Speed ? new List<Unit> { unit1, unit2 } : new List<Unit> { unit2, unit1 };
+        Unit first = order[0];
+        Unit second = order[1];
         do
         {
-            Console.WriteLine($"\n{order[0].Name} attacks {order[1].Name}");
-            int damage = calculateDamage(order[0], order[1]);
-            damages.Add(damage);
-            order[1].Health -= damage;
-            Console.WriteLine($"{order[1].Name} takes {damage} damage and has {order[1].Health} HP left\n");
-
-            if (order[1].Health <= 0)
+            if(checkIfContinue(first, second, out Unit? winner))
             {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"{order[1].Name} has fainted!");
-                Console.WriteLine($"{order[0].Name} wins!");
-                Console.ResetColor();
-                return order[0];
+                return winner;
             }
 
-            Console.WriteLine($"\n{order[1].Name} attacks {order[0].Name}");
-            damage = calculateDamage(order[1], order[0]);
+            Console.WriteLine($"\n{first.Name} attacks {second.Name}");
+            int damage = calculateDamage(ref first, ref second);
+
+            second.Health -= damage;
+            Console.WriteLine($"{second.Name} takes {damage} damage and has {second.Health} HP left\n");
+
+            if (second.Health <= 0)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"{second.Name} has fainted!");
+                Console.WriteLine($"{first.Name} wins!");
+                Console.ResetColor();
+                return first;
+            }
+
+            Console.WriteLine($"\n{second.Name} attacks {first.Name}");
+            damage = calculateDamage(ref second, ref first);
             damage = damage < 0 ? 0 : damage;
-            damages.Add(damage);
-            order[0].Health -= damage;
-            Console.WriteLine($"{order[0].Name} takes {damage} damage and has {order[0].Health} HP left\n");
 
-            if (order[0].Health <= 0)
+            first.Health -= damage;
+            Console.WriteLine($"{first.Name} takes {damage} damage and has {first.Health} HP left\n");
+
+            if (first.Health <= 0)
             {
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"{order[0].Name} has fainted!");
-                Console.WriteLine($"{order[1].Name} wins!");
+                Console.WriteLine($"{first.Name} has fainted!");
+                Console.WriteLine($"{second.Name} wins!");
                 Console.ResetColor();
-                return order[1];
-            }
-
-
-            if (damages.Contains(0))
-            {
-                if (damages[damages.Count-1] == 0 && damages[damages.Count-2] == 0)
-                {
-                    Console.ForegroundColor = ConsoleColor.Cyan;
-                    Console.WriteLine("Both units dealt no damage, it's a draw!");
-                    Console.ResetColor();
-                    return null;
-                }
-                //else if (damages[0] == 0)
-                //{
-                //    Console.ForegroundColor = ConsoleColor.Green;
-                //    Console.WriteLine($"{order[0].Name} dealt no damage to {order[1].Name}!");
-                //    Console.WriteLine($"{order[1].Name} is too strong for {order[0].Name}!");
-                //    Console.WriteLine($"{order[1].Name} wins!");
-                //    Console.ResetColor();
-                //    return order[1];
-                //}
-                //else
-                //{
-                //    Console.ForegroundColor = ConsoleColor.Green;
-                //    Console.WriteLine($"{order[1].Name} dealt no damage to {order[0].Name}!");
-                //    Console.WriteLine($"{order[0].Name} is too strong for {order[1].Name}!");
-                //    Console.WriteLine($"{order[0].Name} wins!");
-                //    Console.ResetColor();
-                //    return order[0];
-                //}
+                return second;
             }
         } while (unit1.Health > 0 && unit2.Health > 0);
 
         return null;
     }
 
-    // static void Main(string[] args)
-    // {
-    //     Unit unit1 = new Unit()
-    //     {
-    //         Name = "Ancestral Dragon ultra necrozma",
-    //         Health = 15000,
-    //         Attack = 160,
-    //         Defense = 150,
-    //         Speed = 95.0,
-    //         Types = new List<EType> { EType.Dragon, EType.Psychic }
-    //     };
-    //     Unit unit2 = new Unit()
-    //     {
-    //         Name = "Lord bidoof",
-    //         Health = 300000,
-    //         Attack = 200,
-    //         Defense = 100,
-    //         Speed = 1500.0,
-    //         Types = new List<EType> { EType.Normal }
-    //     };
-
-    //     StartBattle(unit1, unit2);
-    // }
+    private static bool checkIfContinue(Unit first, Unit second, out Unit? winner)
+    {
+        if (!first.Attacks[0].dealsDamage && !first.Attacks[1].dealsDamage)
+        {
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"{first.Name} cant deal damage to {second.Name}!");
+            Console.WriteLine($"{second.Name} wins by default!");
+            Console.ResetColor();
+            winner = second;
+            return true; // Continue the battle
+        }
+        else if (!second.Attacks[0].dealsDamage && !second.Attacks[1].dealsDamage)
+        {
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"{second.Name} cant deal damage to {first.Name}!");
+            Console.WriteLine($"{first.Name} wins by default!");
+            Console.ResetColor();
+            winner = first;
+            return true; // Continue the battle
+        }
+        else
+        {
+            winner = null;
+            return false;
+        }
+    }
 
     private static void ShowInfo(Unit unit, Unit unit2)
     {
@@ -116,14 +95,14 @@ public class Battle
         Console.ResetColor();
     }
 
-    private static int calculateDamage(Unit attacker, Unit defender)
+    private static int calculateDamage(ref Unit attacker, ref Unit defender)
     {
         
 
         int level = 100;
         double atk = attacker.Attack;
         double def = defender.Defense;
-        List<double> power = GetRandAttk(attacker.Attacks, attacker.Name, attacker.Types, defender);
+        List<double> power = GetRandAttk(ref attacker, defender);
 
         double baseDamage = (((2 * level / 5 + 2) * power[0] * atk / def) / 50 + 2) * power[1];
 
@@ -140,44 +119,51 @@ public class Battle
             Console.ResetColor();
         }
 
-        int damage = Math.Max(1, (int)baseDamage); // daño mínimo de 1
+        int damage = (int)baseDamage;
 
         return damage;
     }
 
-    private static List<double> GetRandAttk(List<atk> attacks, string name, List<EType> types, Unit defender)
+    private static List<double> GetRandAttk(ref Unit attacker, Unit defender)
     {
-        if (attacks == null || attacks.Count == 0)
+        if (attacker.Attacks == null || attacker.Attacks.Count == 0)
         {
-            Console.WriteLine($"{name} has no attacks available and uses his body!");
+            Console.WriteLine($"{attacker.Name} has no attacks available and uses his body!");
             return [1,1]; // Default power if no attacks are available
         }
 
         Random random = new Random();
-        int randomIndex = random.Next(attacks.Count);
-        atk selectedAtk = attacks[randomIndex];
+        int randomIndex = random.Next(attacker.Attacks.Count);
+        atk selectedAtk = attacker.Attacks[randomIndex];
+
+        if(selectedAtk.dealsDamage == false)
+        {
+            selectedAtk = attacker.Attacks.Where(a => a.Name != selectedAtk.Name).FirstOrDefault() ?? selectedAtk; // Fallback to first attack that deals damage
+        }
 
         double multiplier = GetStrengthMultiplier.GetMultiplier(selectedAtk, defender);
         if (multiplier == 0)
         {
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"{name}'s attack {selectedAtk.Name} has no effect on {defender.Name}!");
+            Console.WriteLine($"{attacker.Name}'s attack {selectedAtk.Name} has no effect on {defender.Name}!");
             Console.ResetColor();
+
+            attacker.Attacks.Where(a => a.Name == selectedAtk.Name).First().dealsDamage = false;
             return [0,0]; // No damage if the multiplier is 0 (immunity)
         }
 
-        Console.WriteLine($"{name} used {selectedAtk.Name}");
+        Console.WriteLine($"{attacker.Name} used {selectedAtk.Name}");
         double power = selectedAtk.Power;
 
-        if(IsStab(selectedAtk.Type, types))
+        if(IsStab(selectedAtk.Type, attacker.Types))
         {
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"{name} gets STAB bonus for using {selectedAtk.Name}!");
+            Console.WriteLine($"{attacker.Name} gets STAB bonus for using {selectedAtk.Name}!");
             Console.ResetColor();
             power *= 1.5;
         }
 
-        return [power <= 0 && multiplier != 0 ? 1 : power , multiplier]; // Ensure power is at least 1
+        return [power <= 0 ? 1 : power , multiplier]; // Ensure power is at least 1
     }
 
     private static bool IsCriticalHit()
